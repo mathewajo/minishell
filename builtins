@@ -1,0 +1,359 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   buildins.c                                         :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: amathew <amathew@student.42.fr>            +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2022/06/27 15:26:04 by doreshev          #+#    #+#             */
+/*   Updated: 2022/07/11 10:30:54 by amathew          ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
+#include "../minishell.h"
+
+/*
+builtins:
+	1.	echo with option -n : done!
+	2.	cd with only a relative or absolute path - done!
+	3.	pwd with no options - done!
+	4.	export with no options - done!
+	5.	unset with no options - pending!
+	6.	env with no options or arguments - pending!
+	7.	exit with no options - in-progress! 
+/*
+1. echo.c :- echo with option -n
+*/
+int		ft_strlen_s(char *s)
+{
+	int		i;
+	int		count;
+
+	i = 0;
+	count = 0;
+	while (s[i])
+	{
+		if (s[i] != ' ')
+			count++;
+		i++;
+	}
+	return (count);
+}
+int		ft_strequ(char *s1, char *s2)
+{
+	int		i;
+
+	i = 0;
+	if (!s1 || !s2)
+		return (0);
+	while (s1[i] && s2[i] && s1[i] == s2[i])
+		i++;
+	if (!s1[i] && !s2[i])
+		return (1);
+	return (0);
+}
+
+void	ft_echo(t_data *minishell, t_data *cmd)
+{
+	t_token	*args;
+	int		endl;
+
+	args = cmd->args; /* why not linking to struct?? */
+
+	endl = 1;
+	while (args && ft_strequ(args->word, "-n"))
+	{
+		endl = 0;
+		args = args->next;
+	}
+	while (args)
+	{
+		ft_putstr(args->word);
+		if (args->next)
+			ft_putchar(' ');
+		args = args->next;
+	}
+	if (endl)
+		ft_puchar('\n');
+	minishell->exit = 0; /* not linking to struct */
+}
+
+/*
+2. ft_cd.c :- cd with only a relative or absolute path.
+*/
+
+void	ft_pwd(t_data *minishell)
+{
+	char	*backup;
+
+	backup = ft_strdup(minishell->curdir);
+	ft_strdel(&minishell->curdir); /*not linking*/
+	/* check get_evn and set_env */
+	if (get_env(minishell, "PWD") && get_env(minishell, "OLDPWD"))
+		set_env(minishell, "OLDPWD", get_env(minishell, "PWD"));
+	minishell->curdir = getcwd(NULL, 0);
+	if (!minishell->curdir)
+	{
+		ft_printf(2, "cd: error retrieving current directory: getcwd: "
+			"cannot access parent directories: No such file or directory\n");
+		minishell->curdir = ft_strjoin_free(backup, "/.");
+		return ;
+	}
+}
+
+
+void	ft_cd(t_data *minishell, t_data *cmd)
+{
+	t_token	*args;
+
+	args = cmd->args; /*not linking to struct */
+	if (!args)
+	{
+		if (chdir(get_env(minishell, "HOME")))
+		{
+			ft_printf(2, "%s: cd: %s: %s\n", minishell->name, args->word,
+				sterror(errno));
+			minishell->exit = 1;
+			return ;
+		}
+	}
+	minishell->exit = 0; /* not linking to struct */
+	ft_pwd(minishell);
+}
+
+/*
+3. ft_pwd_cmd :- pwd with no options
+*/
+void	ft_putendl(char *s)
+{
+	ft_putstr(s);
+	ft_putchar('\n');
+}
+
+void	ft_pwd_cmd(t_data *minishell)
+{
+	ft_putendl(minishell->curdir);
+	minishell.exit = 0;
+}
+
+/*
+4. export with no options.
+
+
+/*
+5. env.c :- env with no options or argements
+*/
+void	ft_env(t_list **begin)
+{
+	int		i;
+	t_list	*tmp;
+
+	i = 0;
+	tmp = *begin;
+	if (!*begin)
+		return ;
+	while (tmp)
+	{
+		if (((t_env*)(tmp->content))->value && !((t_env*)(tmp->content))->tmp)
+			ft_printf("%s=%s\n", ((t_env*)(tmp->content))->name,
+				((t_env*)(tmp->content))->value);
+		tmp = tmp->next;
+	}
+}
+
+
+/*
+exit with no options
+*/
+
+void	ft_strdel(char **str)
+{
+	free(*str);
+	*str = NULL;
+}
+
+void	exit_cmd3(t_data *minishell, int status)
+{
+	ft_strdel(&minishell->name);
+	ft_strdel(&minishell->curdir);
+	ft_strdel(&minishell->line);
+	ft_strdel(&minishell->exit_str);
+
+}
+
+
+
+
+
+// #ifndef MINISHELL_H
+// # define MINISHELL_H
+
+// # include "./libft/libft.h"
+// # include <readline/readline.h>
+// # include <readline/history.h>
+// # include <stdlib.h>
+// # include <fcntl.h>
+// # include <unistd.h>
+// # include <stdarg.h>
+// # include <string.h>
+// # include <stdio.h>
+// # include <dirent.h>
+// # include <signal.h>
+// # include <errno.h>
+
+// typedef struct	s_data
+// {
+// 	char			*cmd; /*mathew */
+// 	// int			cmd;
+// 	int				pipe;
+// 	int				in;
+// 	int				out;
+// 	char			*line;
+// 	char			**env;
+// 	char			*curdir; /*mathew */
+// 	struct s_token	*args;
+// }	t_data;
+
+// typedef	struct	s_token
+// {
+// 	char			*word;
+// 	int				type;
+// 	struct s_token	*prev;
+// 	struct s_token	*next;
+// }	t_token;
+
+// typedef struct		s_env
+// {
+// 	char	*name;
+// 	char	*value;
+// 	int		tmp;
+// }			t_env;
+
+// void	ft_init(char **envp, t_data *a);
+// void	ft_free_dpointer(char **p);
+// void	ft_free(t_data *a);
+
+
+// #endif
+
+
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   minishell.h                                        :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: doreshev <doreshev@student.42.fr>          +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2022/06/11 19:11:13 by doreshev          #+#    #+#             */
+/*   Updated: 2022/07/06 15:56:57 by doreshev         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+​
+#ifndef MINISHELL_H
+# define MINISHELL_H
+​
+# include "libft/libft.h"
+# include <readline/readline.h>
+# include <readline/history.h>
+​
+typedef struct s_env
+{
+	char			*key;
+	char			*content;
+	struct s_env	*next;
+}					t_env;
+​
+typedef struct s_token
+{
+	char			c;
+	char			*content;
+	struct s_env	*next;
+}					t_token;
+​
+typedef struct s_data
+{
+	int		miss_q;
+	int		exit;
+	int		cmd;
+	int		pipe;
+	int		in;
+	int		here_doc;
+	int		out;
+	int		d_out;
+	char	*line;
+	t_token	*token;
+	t_env	*env;
+}				t_data;
+​
+void	ft_free(t_data *a);
+void	ft_free_env(t_env *p);
+void	ft_init(char **envp, t_data *a);
+void	ft_new_token(t_data *a, char c, char *s);
+t_env	*ft_new_env(char *s);
+int		ft_dollar(t_data *a,int i);
+int		ft_quote(t_data *a,int i);
+int		ft_dquote(t_data *a,int i);
+int		ft_word(t_data *a,int i);
+​
+#endif/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   minishell.h                                        :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: doreshev <doreshev@student.42.fr>          +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2022/06/11 19:11:13 by doreshev          #+#    #+#             */
+/*   Updated: 2022/07/06 15:56:57 by doreshev         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+​
+#ifndef MINISHELL_H
+# define MINISHELL_H
+​
+# include "libft/libft.h"
+# include <readline/readline.h>
+# include <readline/history.h>
+​
+typedef struct s_env
+{
+	char			*key;
+	char			*content;
+	struct s_env	*next;
+}					t_env;
+​
+typedef struct s_token
+{
+	char			c;
+	char			*content;
+	struct s_env	*next;
+}					t_token;
+​
+typedef struct s_data
+{
+	int		miss_q;
+	int		exit;
+	int		cmd;
+	int		pipe;
+	int		in;
+	int		here_doc;
+	int		out;
+	int		d_out;
+	char	*line;
+	char	*name;
+	char	*curdir;
+	char	*exit_str;
+	t_token	*token;
+	t_env	*env;
+}				t_data;
+​
+void	ft_free(t_data *a);
+void	ft_free_env(t_env *p);
+void	ft_init(char **envp, t_data *a);
+void	ft_new_token(t_data *a, char c, char *s);
+t_env	*ft_new_env(char *s);
+int		ft_dollar(t_data *a,int i);
+int		ft_quote(t_data *a,int i);
+int		ft_dquote(t_data *a,int i);
+int		ft_word(t_data *a,int i);
+​
+#endif
